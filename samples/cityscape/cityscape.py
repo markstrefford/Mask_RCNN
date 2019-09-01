@@ -85,7 +85,7 @@ class CityScapeDataset(utils.Dataset):
     # TODO - Find a way to add class_list to __init__() without overriding utils.Dataset __init__()!
     # TODO - Determine how best to handle multiple classes here. Currently just using building.
     #  Issue arose in displaying the masks as it defaulted to the 1st class (road)
-    def load_cityscape(self, dataset_dir, mask_dir, subset, class_list=['building']):
+    def load_cityscape(self, dataset_dir, mask_dir, subset):
         """Load a subset of the CityScape dataset.
         dataset_dir: Root directory of the dataset.
         subset: Subset to load: train or val
@@ -134,7 +134,7 @@ class CityScapeDataset(utils.Dataset):
             for object in objects:
                 obj_class = object['label']
                 obj_polygons = object['polygon']
-                if obj_class in class_list and obj_polygons != []:
+                if obj_class == 'building' and obj_polygons != []:
                     polygon = dict()
                     all_points_y, all_points_x = [], []
                     for x, y in obj_polygons:
@@ -145,13 +145,13 @@ class CityScapeDataset(utils.Dataset):
                     polygons.append(polygon)
 
             self.add_image(
-                'cityscape',
+                'building',
                 image_id=image_file,
                 path=image_path,
                 width=w, height=h,
                 polygons=polygons)
 
-    def load_mask(self, image_id, class_list=['building']):
+    def load_mask(self, image_id):
         """Generate instance masks for an image.
        Returns:
         masks: A bool array of shape [height, width, instance count] with
@@ -160,7 +160,7 @@ class CityScapeDataset(utils.Dataset):
         """
         # If not a cityscape dataset image, delegate to parent class.
         image_info = self.image_info[image_id]
-        if image_info["source"] != "cityscape":
+        if image_info["source"] != "building":
             return super(self.__class__, self).load_mask(image_id)
 
         # Convert polygons to a bitmap mask of shape
@@ -180,7 +180,7 @@ class CityScapeDataset(utils.Dataset):
     def image_reference(self, image_id):
         """Return the path of the image."""
         info = self.image_info[image_id]
-        if info["source"] == "cityscape":
+        if info["source"] == "building":
             return info["path"]
         else:
             super(self.__class__, self).image_reference(image_id)
