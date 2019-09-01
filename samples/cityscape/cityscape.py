@@ -81,7 +81,7 @@ class CityScapeConfig(Config):
 
 class CityScapeDataset(utils.Dataset):
 
-    def load_cityscape(self, dataset_dir, subset):
+    def load_cityscape(self, dataset_dir, mask_dir, subset):
         """Load a subset of the CityScape dataset.
         dataset_dir: Root directory of the dataset.
         subset: Subset to load: train or val
