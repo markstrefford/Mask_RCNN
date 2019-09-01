@@ -33,6 +33,7 @@ import json
 import datetime
 import numpy as np
 import skimage.draw
+from pathlib import Path
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")
@@ -81,7 +82,10 @@ class CityScapeConfig(Config):
 
 class CityScapeDataset(utils.Dataset):
 
-    def load_cityscape(self, dataset_dir, mask_dir, subset):
+    # TODO - Find a way to add class_list to __init__() without overriding utils.Dataset __init__()!
+    # TODO - Determine how best to handle multiple classes here. Currently just using building.
+    #  Issue arose in displaying the masks as it defaulted to the 1st class (road)
+    def load_cityscape(self, dataset_dir, mask_dir, subset, class_list=['building']):
         """Load a subset of the CityScape dataset.
         dataset_dir: Root directory of the dataset.
         subset: Subset to load: train or val
@@ -89,70 +93,65 @@ class CityScapeDataset(utils.Dataset):
         # Add classes.
         # From https://www.cityscapes-dataset.com/dataset-overview/#features
         cityscape_classes = [
-            'road', 'sidewalk', 'parking', 'rail', 'track',
-            'person', 'rider',
-            'car', 'truck', 'bus', 'on rails', 'motorcycle', 'bicycle', 'caravan', 'trailer',
-            'building', 'wall', 'fence', 'guard rail', 'bridge', 'tunnel',
-            'pole', 'pole group', 'traffic sign', 'traffic light',
-            'vegetation', 'terrain',
-            'ground', 'dynamic', 'static'
+            'building'
         ]
+        #         cityscape_classes = [
+        #             'road', 'sidewalk', 'parking', 'rail', 'track',
+        #             'person', 'rider',
+        #             'car', 'truck', 'bus', 'on rails', 'motorcycle', 'bicycle', 'caravan', 'trailer',
+        #             'building', 'wall', 'fence', 'guard rail', 'bridge', 'tunnel',
+        #             'pole', 'pole group', 'traffic sign', 'traffic light',
+        #             'vegetation', 'terrain',
+        #             'ground', 'dynamic', 'static'
+        #         ]
         for id, cityscape_class in enumerate(cityscape_classes):
             self.add_class(cityscape_class, id, cityscape_class)
 
         # Train or validation dataset?
         assert subset in ["train", "val"]
         dataset_dir = os.path.join(dataset_dir, subset)
+        mask_dir = os.path.join(mask_dir, subset)
 
-        # Load annotations
-        # VGG Image Annotator (up to version 1.6) saves each image in the form:
-        # { 'filename': '28503151_5b5b7ec140_b.jpg',
-        #   'regions': {
-        #       '0': {
-        #           'region_attributes': {},
-        #           'shape_attributes': {
-        #               'all_points_x': [...],
-        #               'all_points_y': [...],
-        #               'name': 'polygon'}},
-        #       ... more regions ...
-        #   },
-        #   'size': 100202
-        # }
-        # We mostly care about the x and y coordinates of each region
-        # Note: In VIA 2.0, regions was changed from a dict to a list.
-        annotations = json.load(open(os.path.join(dataset_dir, "via_region_data.json")))
-        annotations = list(annotations.values())  # don't need the dict keys
+        image_list = Path(dataset_dir).glob('**/*.png')
+        for image_path in image_list:
+            city, image_file = str(image_path).split(os.sep)[-2:]
 
-        # The VIA tool saves images in the JSON even if they don't have any
-        # annotations. Skip unannotated images.
-        annotations = [a for a in annotations if a['regions']]
+            # Get JSON file
+            json_file = image_file.replace('_leftImg8bit.png', '_gtFine_polygons.json')
+            json_filepath = os.path.join(mask_dir, city, json_file)
 
-        # Add images
-        for a in annotations:
-            # Get the x, y coordinaets of points of the polygons that make up
-            # the outline of each object instance. These are stores in the
-            # shape_attributes (see json format above)
-            # The if condition is needed to support VIA versions 1.x and 2.x.
-            if type(a['regions']) is dict:
-                polygons = [r['shape_attributes'] for r in a['regions'].values()]
-            else:
-                polygons = [r['shape_attributes'] for r in a['regions']] 
+            # Load mask polygons json
+            # From https://stackoverflow.com/a/55016816/1378071 as cityscapes json wouldn't load without this!
+            with open(json_filepath, encoding='utf-8', errors='ignore') as json_data:
+                mask_json = json.load(json_data, strict=False)
 
-            # load_mask() needs the image size to convert polygons to masks.
-            # Unfortunately, VIA doesn't include it in JSON, so we must read
-            # the image. This is only managable since the dataset is tiny.
-            image_path = os.path.join(dataset_dir, a['filename'])
-            image = skimage.io.imread(image_path)
-            height, width = image.shape[:2]
+            h, w = mask_json['imgHeight'], mask_json['imgWidth']
+
+            # Get masks for each object
+            objects = list(mask_json['objects'])
+
+            polygons = []
+            for object in objects:
+                obj_class = object['label']
+                obj_polygons = object['polygon']
+                if obj_class in class_list and obj_polygons != []:
+                    polygon = dict()
+                    all_points_y, all_points_x = [], []
+                    for x, y in obj_polygons:
+                        all_points_x.append(x)
+                        all_points_y.append(y)
+                        polygon['all_points_y'] = all_points_y
+                        polygon['all_points_x'] = all_points_x
+                    polygons.append(polygon)
 
             self.add_image(
-                "cityscape",
-                image_id=a['filename'],  # use file name as a unique image id
+                'cityscape',
+                image_id=image_file,
                 path=image_path,
-                width=width, height=height,
+                width=w, height=h,
                 polygons=polygons)
 
-    def load_mask(self, image_id):
+    def load_mask(self, image_id, class_list=['building']):
         """Generate instance masks for an image.
        Returns:
         masks: A bool array of shape [height, width, instance count] with
