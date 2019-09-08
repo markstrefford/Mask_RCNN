@@ -34,7 +34,6 @@ import datetime
 import numpy as np
 import skimage.draw
 from pathlib import Path
-import sagemaker_containers
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")
@@ -45,12 +44,11 @@ from mrcnn.config import Config
 from mrcnn import model as modellib, utils
 
 # Path to trained weights file
-# COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
-COCO_WEIGHTS_PATH = os.path.join(os.environ['SM_CHANNEL_TRAINING'], 'mask_rcnn_coco.h5')
+COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
-DEFAULT_LOGS_DIR = default=os.environ['SM_MODEL_DIR']  # os.path.join(ROOT_DIR, "logs")
+DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
 ############################################################
 #  Configurations
@@ -298,8 +296,7 @@ if __name__ == '__main__':
                         help="'train' or 'splash'")
     parser.add_argument('--dataset', required=False,
                         metavar="/path/to/cityscape/dataset/",
-                        help='Directory of the CityScape dataset',
-                        default=os.environ['SM_CHANNEL_TRAINING'])
+                        help='Directory of the CityScape dataset')
     parser.add_argument('--weights', required=True,
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
