@@ -190,7 +190,9 @@ def train(model):
     """Train the model."""
     # Training dataset.
     dataset_train = CityScapeDataset()
-    dataset_train.load_cityscape(args.dataset, "train")
+    dataset_dir = os.path.join(args.dataset, 'leftImg8bit_trainvaltest/leftImg8bit')
+    mask_dir = os.path.join(args.dataset, 'gtFine_trainvaltest/gtFine')
+    dataset_train.load_cityscape(dataset_dir, mask_dir, "train")
     dataset_train.prepare()
 
     # Validation dataset
