@@ -197,7 +197,7 @@ def train(model):
 
     # Validation dataset
     dataset_val = CityScapeDataset()
-    dataset_val.load_cityscape(args.dataset, "val")
+    dataset_val.load_cityscape(dataset_dir, mask_dir, "val")
     dataset_val.prepare()
 
     # *** This training schedule is an example. Update to your needs ***
