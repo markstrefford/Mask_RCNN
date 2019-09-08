@@ -138,6 +138,9 @@ class CityScapeDataset(utils.Dataset):
                     polygon = dict()
                     all_points_y, all_points_x = [], []
                     for x, y in obj_polygons:
+                        # Handle polygons outside of image area
+                        x = x if x < w else x = w - 1
+                        y = y if y < h else y = h - 1
                         all_points_x.append(x)
                         all_points_y.append(y)
                         polygon['all_points_y'] = all_points_y
