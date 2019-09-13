@@ -210,47 +210,32 @@ def train(model):
     print("Training network heads")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=4,   # 30,
+                epochs=4,    # Low number of epochs due to large training set size (5000+ images)
                 layers='heads')
 
 
-def color_splash(image, mask):
-    """Apply color splash effect.
-    image: RGB image [height, width, 3]
-    mask: instance segmentation mask [height, width, instance count]
-
-    Returns result image.
-    """
-    # Make a grayscale copy of the image. The grayscale copy still
-    # has 3 RGB channels, though.
-    gray = skimage.color.gray2rgb(skimage.color.rgb2gray(image)) * 255
-    # Copy color pixels from the original color image where mask is set
-    if mask.shape[-1] > 0:
-        # We're treating all instances as one, so collapse the mask into one layer
-        mask = (np.sum(mask, -1, keepdims=True) >= 1)
-        splash = np.where(mask, image, gray).astype(np.uint8)
-    else:
-        splash = gray.astype(np.uint8)
-    return splash
-
-
-def detect_and_color_splash(model, image_path=None, video_path=None):
+def detect_and_create_mask(model, image_path=None, video_path=None):
     assert image_path or video_path
 
     # Image or video?
     if image_path:
-        # Run model detection and generate the color splash effect
+        # Run model detection and generate masks
         print("Running on {}".format(args.image))
         # Read image
         image = skimage.io.imread(args.image)
         # Detect objects
         r = model.detect([image], verbose=1)[0]
-        # Color splash
-        splash = color_splash(image, r['masks'])
+        print('Image {} - Found {} masks'.format(image_path, r['masks'].shape))
         # Save output
-        file_name = "splash_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
-        skimage.io.imsave(file_name, splash)
+        img_dir = os.dirname(image_path) + '_seg'
+        img_file = os.basename(image_path)
+        for i, mask in enumerate(r['masks']):
+            fname = '{}_{}.{}'.format(img_file.split('.')[0], i, img_file.split('.')[1])
+            file_name = os.path.join(img_dir, fname)
+            print('Saving mask to {}'.format(file_name))
+            skimage.io.imsave(file_name, r['masks'][i])
     elif video_path:
+        # TODO: Modify video code as above
         import cv2
         # Video capture
         vcapture = cv2.VideoCapture(video_path)
@@ -298,7 +283,7 @@ if __name__ == '__main__':
         description='Train Mask R-CNN to detect cityscapes.')
     parser.add_argument("command",
                         metavar="<command>",
-                        help="'train' or 'splash'")
+                        help="'train' or 'mask'")
     parser.add_argument('--dataset', required=False,
                         metavar="/path/to/cityscape/dataset/",
                         help='Directory of the CityScape dataset')
@@ -320,7 +305,7 @@ if __name__ == '__main__':
     # Validate arguments
     if args.command == "train":
         assert args.dataset, "Argument --dataset is required for training"
-    elif args.command == "splash":
+    elif args.command == "genmask":
         assert args.image or args.video,\
                "Provide --image or --video to apply color splash"
 
@@ -377,8 +362,8 @@ if __name__ == '__main__':
     # Train or evaluate
     if args.command == "train":
         train(model)
-    elif args.command == "splash":
-        detect_and_color_splash(model, image_path=args.image,
+    elif args.command == "genmask":
+        detect_and_create_mask(model, image_path=args.image,
                                 video_path=args.video)
     else:
         print("'{}' is not recognized. "
