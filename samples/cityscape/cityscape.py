@@ -21,10 +21,10 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
     python3 cityscape.py train --dataset=/path/to/cityScape/dataset --weights=imagenet
 
     # Apply color splash to an image
-    python3 cityscape.py splash --weights=/path/to/weights/file.h5 --image=<URL or path to file>
+    python3 cityscape.py genmasks --weights=/path/to/weights/file.h5 --image=<URL or path to file>
 
     # Apply color splash to video using the last weights you trained
-    python3 cityscape.py splash --weights=last --video=<URL or path to file>
+    python3 cityscape.py genmasks --weights=last --video=<URL or path to file>
 """
 
 import os
@@ -227,8 +227,8 @@ def detect_and_create_mask(model, image_path=None, video_path=None):
         r = model.detect([image], verbose=1)[0]
         print('Image {} - Found {} masks'.format(image_path, r['masks'].shape))
         # Save output
-        img_dir = os.dirname(image_path) + '_seg'
-        img_file = os.basename(image_path)
+        img_dir = os.path.dirname(image_path) + '_seg'
+        img_file = os.path.basename(image_path)
         for i, mask in enumerate(r['masks']):
             fname = '{}_{}.{}'.format(img_file.split('.')[0], i, img_file.split('.')[1])
             file_name = os.path.join(img_dir, fname)
@@ -367,4 +367,4 @@ if __name__ == '__main__':
                                 video_path=args.video)
     else:
         print("'{}' is not recognized. "
-              "Use 'train' or 'splash'".format(args.command))
+              "Use 'train' or 'genmask'".format(args.command))
