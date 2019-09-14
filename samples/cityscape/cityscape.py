@@ -217,7 +217,7 @@ def train(model):
 
 def detect_and_create_image_mask(image_path):
     # Run model detection and generate masks for a single image
-    print("Running on {}".format(image_path))
+    print("\n********\nRunning on {}".format(image_path))
     # Read image
     image = skimage.io.imread(image_path)
     # Save output
