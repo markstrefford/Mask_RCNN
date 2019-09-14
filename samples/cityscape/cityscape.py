@@ -215,30 +215,42 @@ def train(model):
                 layers='heads')
 
 
-def detect_and_create_mask(model, image_path=None, video_path=None):
-    assert image_path or video_path
+def detect_and_create_image_mask(image_path):
+    # Run model detection and generate masks for a single image
+    print("Running on {}".format(args.image))
+    # Read image
+    image = skimage.io.imread(args.image)
+    # Detect objects
+    r = model.detect([image], verbose=1)[0]
+    print('Image {} - Found {} masks'.format(image_path, r['masks'].shape))
+    # Save output
+    img_dir = os.path.dirname(image_path) + '_seg'
+    img_file = os.path.basename(image_path)
+    filename = ''
+    # All masks as one for now... (but really check size of r[-1] as this is number of masks...
+    # for i, mask in enumerate(r['masks']):
+    masks = r['masks']
+    for i in range(masks.shape[-1]):
+        fname = '{}_{}.{}'.format(img_file.split('.')[0], i, img_file.split('.')[1])
+        file_name = os.path.join(img_dir, fname)
+        print('Saving mask to {}'.format(file_name))
+        skimage.io.imsave(file_name, img_as_uint(masks[:, :, i]))
 
-    # Image or video?
+
+def detect_and_create_mask(model, image_path=None, video_path=None, folder_path=None):
+    assert image_path or video_path or folder_path
+
+    # Image, folder or video?
     if image_path:
-        # Run model detection and generate masks
-        print("Running on {}".format(args.image))
-        # Read image
-        image = skimage.io.imread(args.image)
-        # Detect objects
-        r = model.detect([image], verbose=1)[0]
-        print('Image {} - Found {} masks'.format(image_path, r['masks'].shape))
-        # Save output
-        img_dir = os.path.dirname(image_path) + '_seg'
-        img_file = os.path.basename(image_path)
-        filename = ''
-        # All masks as one for now... (but really check size of r[-1] as this is number of masks...
-        # for i, mask in enumerate(r['masks']):
-        masks = r['masks']
-        for i in range(masks.shape[-1]):
-            fname = '{}_{}.{}'.format(img_file.split('.')[0], i, img_file.split('.')[1])
-            file_name = os.path.join(img_dir, fname)
-            print('Saving mask to {}'.format(file_name))
-            skimage.io.imsave(file_name, img_as_uint(masks[:, :, i]))
+        detect_and_create_image_mask(image_path)
+
+    elif folder_path:
+        images = os.listdir(folder_path)
+        if len(images) == 0:
+            print('No images found in {}'.folder_path)
+        else:
+            for img in images:
+                detect_and_create_image_mask(os.path.join(folder_path, img))
 
     elif video_path:
         # TODO: Modify video code as above
@@ -274,7 +286,7 @@ def detect_and_create_mask(model, image_path=None, video_path=None):
                 vwriter.write(splash)
                 count += 1
         vwriter.release()
-    print("Saved to ", file_name)
+        print("Saved video to ", file_name)
 
 
 ############################################################
@@ -302,18 +314,21 @@ if __name__ == '__main__':
                         help='Logs and checkpoints directory (default=logs/)')
     parser.add_argument('--image', required=False,
                         metavar="path or URL to image",
-                        help='Image to apply the color splash effect on')
+                        help='Image to generate masks on')
     parser.add_argument('--video', required=False,
                         metavar="path or URL to video",
-                        help='Video to apply the color splash effect on')
+                        help='Video to generate masks on (N/A)')
+    parser.add_argument('--folder', required=False,
+                        metavar="path to folder",
+                        help='Folder of images to generate masks on')
     args = parser.parse_args()
 
     # Validate arguments
     if args.command == "train":
         assert args.dataset, "Argument --dataset is required for training"
     elif args.command == "genmask":
-        assert args.image or args.video,\
-               "Provide --image or --video to apply color splash"
+        assert args.image or args.video or args.folder,\
+               "Provide --image, --video or --folder to generate masks"
 
     print("Weights: ", args.weights)
     print("Dataset: ", args.dataset)
@@ -370,7 +385,7 @@ if __name__ == '__main__':
         train(model)
     elif args.command == "genmask":
         detect_and_create_mask(model, image_path=args.image,
-                                video_path=args.video)
+                                video_path=args.video, folder_path=args.folder)
     else:
         print("'{}' is not recognized. "
               "Use 'train' or 'genmask'".format(args.command))
