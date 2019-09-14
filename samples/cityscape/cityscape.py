@@ -230,6 +230,7 @@ def detect_and_create_mask(model, image_path=None, video_path=None):
         # Save output
         img_dir = os.path.dirname(image_path) + '_seg'
         img_file = os.path.basename(image_path)
+        filename = ''
         # All masks as one for now... (but really check size of r[-1] as this is number of masks...
         # for i, mask in enumerate(r['masks']):
         mask = r['masks']
