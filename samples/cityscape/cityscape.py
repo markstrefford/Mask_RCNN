@@ -33,6 +33,7 @@ import json
 import datetime
 import numpy as np
 import skimage.draw
+from skimage import img_as_uint
 from pathlib import Path
 
 # Root directory of the project
@@ -233,7 +234,7 @@ def detect_and_create_mask(model, image_path=None, video_path=None):
             fname = '{}_{}.{}'.format(img_file.split('.')[0], i, img_file.split('.')[1])
             file_name = os.path.join(img_dir, fname)
             print('Saving mask to {}'.format(file_name))
-            skimage.io.imsave(file_name, r['masks'][i])
+            skimage.io.imsave(file_name, img_as_uint(r['masks'][i]))
     elif video_path:
         # TODO: Modify video code as above
         import cv2
