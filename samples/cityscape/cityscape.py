@@ -220,21 +220,23 @@ def detect_and_create_image_mask(image_path):
     print("Running on {}".format(image_path))
     # Read image
     image = skimage.io.imread(image_path)
+    # Save output
+    img_dir = os.path.dirname(image_path)
+    mask_dir = img_dir + '_seg'
+    img_file = os.path.basename(image_path)
     # Detect objects
     r = model.detect([image], verbose=1)[0]
-    print('Image {} - Found {} masks'.format(image_path, r['masks'].shape))
-    # Save output
-    img_dir = os.path.dirname(image_path) + '_seg'
-    img_file = os.path.basename(image_path)
-    filename = ''
-    # All masks as one for now... (but really check size of r[-1] as this is number of masks...
-    # for i, mask in enumerate(r['masks']):
+    print('Image {} - Found {} masks'.format(img_file, r['masks'].shape))
     masks = r['masks']
+    if masks.shape[-1] == 0:
+        print('Generating empty mask!')
+        masks = np.zeros((1024, 1024, 1))
     for i in range(masks.shape[-1]):
         fname = '{}_{}.{}'.format(img_file.split('.')[0], i, img_file.split('.')[1])
-        file_name = os.path.join(img_dir, fname)
+        file_name = os.path.join(mask_dir, fname)
         print('Saving mask to {}'.format(file_name))
         skimage.io.imsave(file_name, img_as_uint(masks[:, :, i]))
+
 
 
 def detect_and_create_mask(model, image_path=None, video_path=None, folder_path=None):
