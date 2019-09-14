@@ -230,11 +230,13 @@ def detect_and_create_mask(model, image_path=None, video_path=None):
         # Save output
         img_dir = os.path.dirname(image_path) + '_seg'
         img_file = os.path.basename(image_path)
-        for i, mask in enumerate(r['masks']):
-            fname = '{}_{}.{}'.format(img_file.split('.')[0], i, img_file.split('.')[1])
-            file_name = os.path.join(img_dir, fname)
-            print('Saving mask to {}'.format(file_name))
-            skimage.io.imsave(file_name, img_as_uint(r['masks'][i]))
+        # All masks as one for now... (but really check size of r[-1] as this is number of masks... if mask.shape[-1] > 0:
+        # for i, mask in enumerate(r['masks']):
+        i = 0
+        fname = '{}_{}.{}'.format(img_file.split('.')[0], i, img_file.split('.')[1])
+        file_name = os.path.join(img_dir, fname)
+        print('Saving mask to {}'.format(file_name))
+        skimage.io.imsave(file_name, img_as_uint(r['masks']))
     elif video_path:
         # TODO: Modify video code as above
         import cv2
